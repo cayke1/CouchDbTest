@@ -4,8 +4,7 @@ import bodyParser from "body-parser";
 import PouchDB from "pouchdb";
 import PouchDBFind from "pouchdb-find";
 
-// Cria os bancos de dados
-const localDB = new PouchDB('local-db');
+// Cria o banco de dados
 const remoteDB = new PouchDB('http://admin:1234@127.0.0.1:5984/todo_list');
 
 // Configura as bibliotecas PouchDB
@@ -16,26 +15,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Define a rota para sincronizar os bancos de dados
-app.post('/sync', async (req, res) => {
-  try {
-    const sync = localDB.replicate.to(remoteDB);
-    sync.on('error', (error) => console.error(error));
-    res.status(200).json({ message: 'Sincronização iniciada' });
-    console.log(sync);
-    sync.on('complete', () => {
-      res.status(200).json({message: 'Sincronização concluída'});
-    })
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erro ao sincronizar bancos de dados' });
-  }
-});
-
 // Define as rotas para as operações CRUD
 app.get('/todos', async (req, res) => {
   try {
-    const result = await localDB.find({ selector: { type: 'todo' } });
+    const result = await remoteDB.find({ selector: { type: 'todo' } });
     res.status(200).json(result.docs);
   } catch (error) {
     console.error(error);
@@ -46,7 +29,7 @@ app.get('/todos', async (req, res) => {
 app.post('/todos', async (req, res) => {
   try {
     const todo = { type: 'todo', text: req.body.text };
-    const result = await localDB.post(todo);
+    const result = await remoteDB.post(todo);
     res.status(200).json({ id: result.id });
   } catch (error) {
     console.error(error);
@@ -56,10 +39,10 @@ app.post('/todos', async (req, res) => {
 
 app.put('/todos/:id', async (req, res) => {
   try {
-    const todo = await localDB.get(req.params.id);
+    const todo = await remoteDB.get(req.params.id);
     //@ts-ignore
     todo.text = req.body.text;
-    await localDB.put(todo);
+    await remoteDB.put(todo);
     res.status(200).json({ message: 'Todo atualizado' });
   } catch (error) {
     console.error(error);
@@ -69,8 +52,8 @@ app.put('/todos/:id', async (req, res) => {
 
 app.delete('/todos/:id', async (req, res) => {
   try {
-    const todo = await localDB.get(req.params.id);
-    await localDB.remove(todo);
+    const todo = await remoteDB.get(req.params.id);
+    await remoteDB.remove(todo);
     res.status(200).json({ message: 'Todo removido' });
   } catch (error) {
     console.error(error);
