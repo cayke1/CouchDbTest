@@ -3,34 +3,23 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import PouchDB from "pouchdb";
 import PouchDBFind from "pouchdb-find";
+import { ManagerCron } from "./manager-cron";
 
 // Cria os bancos de dados
-const localDB = new PouchDB('local-db');
-const remoteDB = new PouchDB('http://admin:1234@127.0.0.1:5984/todo_list');
+export const localDB = new PouchDB('local-db');
+export const remoteDB = new PouchDB('http://admin:1234@127.0.0.1:5984/todo_list');
+const managerCron = new ManagerCron();
 
 // Configura as bibliotecas PouchDB
 PouchDB.plugin(PouchDBFind);
+
+// Tenta sincronizar os Bancos enviando a informação local
+managerCron.run();
 
 // Cria o servidor Express
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
-// Define a rota para sincronizar os bancos de dados
-app.post('/sync', async (req, res) => {
-  try {
-    const sync = localDB.replicate.to(remoteDB);
-    sync.on('error', (error) => console.error(error));
-    res.status(200).json({ message: 'Sincronização iniciada' });
-    console.log(sync);
-    sync.on('complete', () => {
-      res.status(200).json({message: 'Sincronização concluída'});
-    })
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erro ao sincronizar bancos de dados' });
-  }
-});
 
 // Define as rotas para as operações CRUD
 app.get('/todos', async (req, res) => {
